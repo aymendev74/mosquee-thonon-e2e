@@ -1,0 +1,19 @@
+# Fins de ligne : LF dans le dépôt ET sur le disque, quel que soit l'OS.
+#
+# Le répertoire de travail compte autant que le dépôt : le workflow Playwright
+# tourne sous Linux et lit les fichiers tels qu'ils sont sur le disque. Sans
+# cette règle, core.autocrlf=true (valeur par défaut de l'installeur Git for
+# Windows) les convertit en CRLF au checkout.
+* text=auto eol=lf
+
+# Scripts exécutés sous Linux (CI) : LF impératif.
+*.sh text eol=lf
+
+# Scripts exécutés par cmd.exe : CRLF impératif.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaires : aucune normalisation.
+*.png binary
+*.webm binary
+*.zip binary
