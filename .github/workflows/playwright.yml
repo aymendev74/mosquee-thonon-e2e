@@ -5,6 +5,12 @@ on:
     branches: [master]
   pull_request:
 
+# La suite positionne des paramètres globaux sur l'environnement cible : deux runs simultanés
+# se marcheraient dessus.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -27,6 +33,7 @@ jobs:
       - name: Run Playwright tests
         env:
           E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
           E2E_USER: ${{ secrets.E2E_USER }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: npx playwright test

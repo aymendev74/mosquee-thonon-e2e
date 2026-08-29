@@ -1,21 +1,33 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { getEnv } from './helpers/env';
 
-test('test', async ({ page }) => {
-  await page.goto('https://staging.inscription-amc.fr/');
-  await page.getByRole('button', { name: 'Se connecter' }).click();
-  await page.getByRole('textbox', { name: 'Nom d\'utilisateur' }).click();
-  await page.getByRole('textbox', { name: 'Nom d\'utilisateur' }).fill(getEnv('E2E_USER'));
-  await page.getByRole('textbox', { name: 'Nom d\'utilisateur' }).press('Tab');
-  await page.getByRole('textbox', { name: 'Mot de passe' }).fill(getEnv('E2E_PASSWORD'));
-  await page.getByRole('button', { name: 'Se connecter' }).click();
-  await page.locator('.ant-avatar').hover();
-  await page.getByText('Se déconnecter').click();
+test('un administrateur peut se connecter puis se deconnecter', async ({ page }) => {
+    await page.goto('/');
+
+    // Le header public et le formulaire portent tous deux le libelle « Se connecter » :
+    // on passe par les testid pour lever l'ambiguite.
+    await page.getByTestId('se-connecter').click();
+    await expect(page).toHaveURL(/\/login$/);
+
+    await page.getByTestId('username').fill(getEnv('E2E_USER'));
+    await page.getByTestId('password').fill(getEnv('E2E_PASSWORD'));
+    await page.getByTestId('connect').click();
+
+    await page.waitForURL('**/admin');
+    await expect(page.getByTestId('nav-parametres')).toBeVisible();
+
+    await page.getByTestId('avatar-utilisateur').click();
+    await page.getByTestId('menu-logout').click();
+
+    await expect(page.getByTestId('se-connecter')).toBeVisible();
 });
 
-function getEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing env variable: ${name}`);
-  }
-  return value;
-}
+test('un mot de passe errone laisse sur le formulaire', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByTestId('username').fill(getEnv('E2E_USER'));
+    await page.getByTestId('password').fill('mot-de-passe-invalide');
+    await page.getByTestId('connect').click();
+
+    await expect(page.getByText('Identifiants incorrects')).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+});

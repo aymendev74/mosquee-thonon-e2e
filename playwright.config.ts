@@ -10,66 +10,58 @@ dotenv.config({
   path: path.resolve(__dirname, '.env'),
 });
 
-console.log('E2E_USER:', process.env.E2E_USER);
-
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
+  /**
+   * Les tests partagent la base de l'environnement cible (dev en local, staging en CI) et le
+   * setup positionne des paramètres globaux : toute parallélisation les ferait se marcher dessus.
+   */
+  fullyParallel: false,
+  workers: 1,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  timeout: 30000,
+  /* Les parcours d'inscription enchaînent plusieurs étapes et appels réseau. */
+  timeout: 60000,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL: process.env.E2E_BASE_URL,
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
 
     headless: true,
+
+    testIdAttribute: 'testid',
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    /**
+     * Prépare l'environnement (paramètres, période tarifaire, tarifs) et enregistre la session
+     * admin. `teardown` garantit le nettoyage même si des tests échouent.
+     */
     {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+      teardown: 'cleanup',
+    },
+    {
+      name: 'cleanup',
+      testMatch: /.*\.teardown\.ts/,
+    },
+    {
+      /**
+       * Pas de `storageState` global : les parcours publics doivent s'exécuter anonymes.
+       * Les blocs admin déclarent eux-mêmes `test.use({ storageState: ADMIN_STORAGE_STATE })`.
+       */
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });
