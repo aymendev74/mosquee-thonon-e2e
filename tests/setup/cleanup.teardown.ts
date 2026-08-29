@@ -1,5 +1,6 @@
 import { APIRequestContext, test as teardown } from '@playwright/test';
-import { contexteApiAdmin } from '../helpers/auth';
+import { seConnecterAdmin } from '../helpers/auth';
+import { urlApi } from '../helpers/env';
 import { ecrireParametres } from '../helpers/prepareEnv';
 import { E2E_PREFIX, readRunState } from '../helpers/testData';
 
@@ -20,7 +21,7 @@ const EMAIL_E2E = /^e2e-[a-z]+-[a-z0-9]+@example\.com$/;
  * precedent qui aurait ete interrompu avant son nettoyage.
  */
 const supprimerInscriptions = async (api: APIRequestContext, type: 'ENFANT' | 'ADULTE'): Promise<number> => {
-    const reponse = await api.get('v1/inscriptions', { params: { nom: E2E_PREFIX, type } });
+    const reponse = await api.get(urlApi('v1/inscriptions'), { params: { nom: E2E_PREFIX, type } });
     if (!reponse.ok()) {
         throw new Error(`Recherche des inscriptions ${type} - HTTP ${reponse.status()}`);
     }
@@ -29,7 +30,7 @@ const supprimerInscriptions = async (api: APIRequestContext, type: 'ENFANT' | 'A
     if (ids.length === 0) {
         return 0;
     }
-    const suppression = await api.delete('v1/inscriptions', { data: ids });
+    const suppression = await api.delete(urlApi('v1/inscriptions'), { data: ids });
     if (!suppression.ok()) {
         throw new Error(`Suppression des inscriptions ${type} - HTTP ${suppression.status()} : ${await suppression.text()}`);
     }
@@ -37,7 +38,7 @@ const supprimerInscriptions = async (api: APIRequestContext, type: 'ENFANT' | 'A
 };
 
 const supprimerAdhesions = async (api: APIRequestContext): Promise<number> => {
-    const reponse = await api.get('v1/adhesions', { params: { nom: E2E_PREFIX } });
+    const reponse = await api.get(urlApi('v1/adhesions'), { params: { nom: E2E_PREFIX } });
     if (!reponse.ok()) {
         throw new Error(`Recherche des adhesions - HTTP ${reponse.status()}`);
     }
@@ -46,7 +47,7 @@ const supprimerAdhesions = async (api: APIRequestContext): Promise<number> => {
     if (ids.length === 0) {
         return 0;
     }
-    const suppression = await api.delete('v1/adhesions', { data: ids });
+    const suppression = await api.delete(urlApi('v1/adhesions'), { data: ids });
     if (!suppression.ok()) {
         throw new Error(`Suppression des adhesions - HTTP ${suppression.status()} : ${await suppression.text()}`);
     }
@@ -61,7 +62,7 @@ const supprimerAdhesions = async (api: APIRequestContext): Promise<number> => {
  * compte (`deleteByIdUtilisateur`), ce qui serait redondant ici, et se protege du cas vide.
  */
 const supprimerComptes = async (api: APIRequestContext): Promise<number> => {
-    const reponse = await api.get('v1/users', { params: { email: 'e2e-' } });
+    const reponse = await api.get(urlApi('v1/users'), { params: { email: 'e2e-' } });
     if (!reponse.ok()) {
         throw new Error(`Recherche des comptes de test - HTTP ${reponse.status()}`);
     }
@@ -69,7 +70,7 @@ const supprimerComptes = async (api: APIRequestContext): Promise<number> => {
     const cibles = utilisateurs.filter((utilisateur) => EMAIL_E2E.test(utilisateur.email ?? ''));
 
     for (const cible of cibles) {
-        const suppression = await api.delete(`v1/users/${cible.id}`);
+        const suppression = await api.delete(urlApi(`v1/users/${cible.id}`));
         if (!suppression.ok()) {
             throw new Error(`Suppression du compte ${cible.email} - HTTP ${suppression.status()} : ${await suppression.text()}`);
         }
@@ -87,19 +88,18 @@ const supprimerComptes = async (api: APIRequestContext): Promise<number> => {
  * toute la file a chaque cycle et bascule les demandes en IGNORED - statut terminal - tant que
  * l'envoi est coupe : rien ne peut repartir plus tard.
  */
-teardown('nettoie les donnees et restaure les parametres', async () => {
-    const api = await contexteApiAdmin();
-    try {
-        const enfants = await supprimerInscriptions(api, 'ENFANT');
-        const adultes = await supprimerInscriptions(api, 'ADULTE');
-        const adhesions = await supprimerAdhesions(api);
-        const comptes = await supprimerComptes(api);
-        console.log(`Nettoyage : ${enfants} inscription(s) enfant, ${adultes} adulte(s), ${adhesions} adhesion(s), ${comptes} compte(s) supprime(s).`);
+teardown('nettoie les donnees et restaure les parametres', async ({ page }) => {
+    // Rejoue une connexion plutot que de repartir du storageState : le contexte API du
+    // navigateur est le seul a porter la session de maniere fiable (cf. seConnecterAdmin).
+    const api = await seConnecterAdmin(page);
 
-        const { paramsAvantRun } = readRunState();
-        await ecrireParametres(api, paramsAvantRun);
-        console.log(`Parametres restaures : ${JSON.stringify(paramsAvantRun)}`);
-    } finally {
-        await api.dispose();
-    }
+    const enfants = await supprimerInscriptions(api, 'ENFANT');
+    const adultes = await supprimerInscriptions(api, 'ADULTE');
+    const adhesions = await supprimerAdhesions(api);
+    const comptes = await supprimerComptes(api);
+    console.log(`Nettoyage : ${enfants} inscription(s) enfant, ${adultes} adulte(s), ${adhesions} adhesion(s), ${comptes} compte(s) supprime(s).`);
+
+    const { paramsAvantRun } = readRunState();
+    await ecrireParametres(api, paramsAvantRun);
+    console.log(`Parametres restaures : ${JSON.stringify(paramsAvantRun)}`);
 });

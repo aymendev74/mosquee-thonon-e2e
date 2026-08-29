@@ -1,5 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { ajouterJours, analyserDate, anneeScolaireDebut, aujourdHui, formaterDate } from './dates';
+import { urlApi } from './env';
 
 export type NomParametre =
     | 'REINSCRIPTION_ENABLED'
@@ -40,7 +41,7 @@ const verifierReponse = async (reponse: ReponseHttp, contexte: string): Promise<
 };
 
 export const lireParametres = async (api: APIRequestContext): Promise<ParametresApplicatifs> => {
-    const reponse = await api.get('v1/params');
+    const reponse = await api.get(urlApi('v1/params'));
     await verifierReponse(reponse, 'Lecture des parametres');
     const dto: ParamsDto = await reponse.json();
     return {
@@ -53,7 +54,7 @@ export const lireParametres = async (api: APIRequestContext): Promise<Parametres
 
 export const ecrireParametres = async (api: APIRequestContext, parametres: ParametresApplicatifs): Promise<void> => {
     const corps = Object.entries(parametres).map(([name, value]) => ({ name, value }));
-    const reponse = await api.post('v1/params', { data: corps });
+    const reponse = await api.post(urlApi('v1/params'), { data: corps });
     await verifierReponse(reponse, 'Ecriture des parametres');
 };
 
@@ -73,7 +74,7 @@ export const ouvrirLesInscriptions = async (api: APIRequestContext): Promise<voi
 };
 
 const listerPeriodes = async (api: APIRequestContext, application: ApplicationTarif): Promise<PeriodeInfoDto[]> => {
-    const reponse = await api.get('v1/periodes', { params: { application } });
+    const reponse = await api.get(urlApi('v1/periodes'), { params: { application } });
     await verifierReponse(reponse, `Lecture des periodes ${application}`);
     return reponse.json();
 };
@@ -126,14 +127,14 @@ const creerPeriode = async (
         application,
     };
 
-    const validation = await api.post('v1/periodes/validation', { data: periode });
+    const validation = await api.post(urlApi('v1/periodes/validation'), { data: periode });
     await verifierReponse(validation, `Validation de la periode ${application}`);
     const resultat = await validation.json();
     if (!resultat.success) {
         throw new Error(`Periode ${application} refusee par le back : ${resultat.errorCode}`);
     }
 
-    const creation = await api.post('v1/periodes', { data: resultat.periode });
+    const creation = await api.post(urlApi('v1/periodes'), { data: resultat.periode });
     await verifierReponse(creation, `Creation de la periode ${application}`);
 };
 
@@ -163,7 +164,7 @@ const garantirTarifs = async (
     idPeriode: number,
     application: ApplicationTarif,
 ): Promise<void> => {
-    const reponse = await api.get(`v1/tarifs-admin/${idPeriode}`);
+    const reponse = await api.get(urlApi(`v1/tarifs-admin/${idPeriode}`));
     await verifierReponse(reponse, `Lecture des tarifs de la periode ${idPeriode}`);
     const grilleExistante = await reponse.json();
     const montantTemoin = application === 'COURS_ENFANT'
@@ -174,7 +175,7 @@ const garantirTarifs = async (
         return;
     }
 
-    const sauvegarde = await api.post('v1/tarifs-admin', { data: grilleTarifs(idPeriode, application) });
+    const sauvegarde = await api.post(urlApi('v1/tarifs-admin'), { data: grilleTarifs(idPeriode, application) });
     await verifierReponse(sauvegarde, `Enregistrement des tarifs ${application}`);
 };
 
@@ -206,7 +207,7 @@ export const garantirPeriodeEtTarifs = async (
  * incomprehensible - autant echouer tout de suite avec un message explicite.
  */
 export const verifierTarifsAdhesion = async (api: APIRequestContext): Promise<void> => {
-    const reponse = await api.get('v1/tarifs', { params: { application: 'ADHESION' } });
+    const reponse = await api.get(urlApi('v1/tarifs'), { params: { application: 'ADHESION' } });
     await verifierReponse(reponse, "Lecture des tarifs d'adhesion");
     const tarifs = await reponse.json();
     expect(

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './helpers/env';
 import { choisirOption, remplirDate, remplirTexte } from './helpers/antd';
+import { seConnecterAdmin } from './helpers/auth';
 import { donneesInscriptionEnfant } from './helpers/testData';
 
 /**
@@ -52,11 +52,9 @@ test.describe.serial('Inscription enfant', () => {
     });
 
     test.describe('reprise par un administrateur', () => {
-        test.use({ storageState: ADMIN_STORAGE_STATE });
-
         test('un administrateur peut modifier et sauver l\'inscription', async ({ page }) => {
             const donnees = donneesInscriptionEnfant();
-            await page.goto('/admin');
+            await seConnecterAdmin(page);
             await page.getByTestId('nav-coursArabes').click();
             await page.getByTestId('nav-adminCoursEnfants').click();
 
