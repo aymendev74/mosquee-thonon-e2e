@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 # La suite positionne des paramètres globaux sur l'environnement cible : deux runs simultanés
 # se marcheraient dessus.
