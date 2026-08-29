@@ -56,8 +56,8 @@ export default defineConfig({
     },
     {
       /**
-       * Pas de `storageState` global : les parcours publics doivent s'exécuter anonymes.
-       * Les blocs admin déclarent eux-mêmes `test.use({ storageState: ADMIN_STORAGE_STATE })`.
+       * Aucun état d'authentification partagé : les parcours publics s'exécutent anonymes et les
+       * tests d'administration se connectent eux-mêmes via `seConnecterAdmin`.
        */
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },

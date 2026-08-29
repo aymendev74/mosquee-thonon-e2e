@@ -1,13 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './helpers/env';
 import { attendreInterrupteur } from './helpers/antd';
 import { analyserDate, aujourdHui } from './helpers/dates';
-
-test.use({ storageState: ADMIN_STORAGE_STATE });
+import { seConnecterAdmin } from './helpers/auth';
 
 test.describe('Écran Paramètres', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/admin');
+        await seConnecterAdmin(page);
         await page.getByTestId('nav-parametres').click();
         await expect(page.getByRole('heading', { name: "Paramètres de l'application" })).toBeVisible();
     });

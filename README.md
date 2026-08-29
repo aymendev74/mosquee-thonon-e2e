@@ -93,3 +93,17 @@ Réactiver le paramètre plus tard ne peut donc pas faire repartir d'anciens mai
 
 Ces pièges sont encapsulés dans `tests/helpers/antd.ts` : utiliser ces helpers plutôt que de
 piloter antd directement.
+
+## Authentification dans les tests
+
+Tout ce qui a besoin d'un administrateur appelle `seConnecterAdmin(page)`, qui se connecte par
+l'interface — donc via le vrai flux OAuth2/PKCE — et renvoie `page.request`, le contexte API du
+navigateur. Ce contexte partage le stockage de cookies avec la page et porte donc la session.
+
+Ne pas revenir à un `storageState` réinjecté dans un `request.newContext()` : sur staging, ce
+transfert n'a transmis aucun cookie et tous les appels API partaient en 401, alors que la
+connexion dans le navigateur, elle, fonctionnait. Une seule mécanique d'authentification, celle
+que l'application utilise réellement.
+
+Corollaire : les appels API se construisent avec `urlApi()` (URL absolue), car la `baseURL` du
+contexte navigateur est celle du front, pas celle de l'API.
