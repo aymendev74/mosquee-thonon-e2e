@@ -107,3 +107,17 @@ que l'application utilise réellement.
 
 Corollaire : les appels API se construisent avec `urlApi()` (URL absolue), car la `baseURL` du
 contexte navigateur est celle du front, pas celle de l'API.
+
+### `E2E_BASE_URL` et `E2E_API_BASE_URL` doivent viser le même hôte
+
+Les cookies de session sont posés sur l'hôte que l'application utilise réellement — qui n'est pas
+forcément celui par lequel on entre. Sur staging, la redirection OAuth bascule l'application sur
+le sous-domaine `www` : entrer par `https://staging.inscription-amc.fr` fait atterrir les cookies
+sur `www.staging.inscription-amc.fr`. Si `E2E_API_BASE_URL` vise l'apex, aucun cookie n'est
+transmis à l'API et **tous les appels authentifiés répondent 401**, alors que la connexion dans
+le navigateur fonctionne et que les endpoints publics répondent 200 — un symptôme très peu
+parlant.
+
+`seConnecterAdmin` compare donc les deux hôtes après connexion et échoue avec un message
+explicite en cas d'écart. Les cookies ignorant le port, la comparaison porte sur le nom d'hôte :
+front et API peuvent cohabiter sur `localhost` avec des ports différents.
