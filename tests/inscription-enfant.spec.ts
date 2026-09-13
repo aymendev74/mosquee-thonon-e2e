@@ -83,5 +83,50 @@ test.describe.serial('Inscription enfant', () => {
             await boutonModifier.click();
             await expect(page.getByTestId('responsableLegal.ville')).toHaveValue(donnees.villeModifiee);
         });
+
+        // Regression : l'ajout d'un eleve a une inscription existante provoquait une violation
+        // NOT NULL sur eleve.idtari (pre-flush Hibernate pendant la recherche du tarif).
+        test("un administrateur peut ajouter un eleve a l'inscription", async ({ page }) => {
+            const donnees = donneesInscriptionEnfant();
+            await seConnecterAdmin(page);
+            await page.getByTestId('nav-coursArabes').click();
+            await page.getByTestId('nav-adminCoursEnfants').click();
+
+            await remplirTexte(page, 'nom', donnees.eleve.nom);
+            await page.getByTestId('rechercher').click();
+            const boutonModifier = page.locator('[testid^="modifier-inscription-"]');
+            await expect(boutonModifier).toHaveCount(1);
+            await boutonModifier.click();
+
+            // Attendre que la fiche soit chargee avant de passer a l'etape suivante, sinon la
+            // validation des champs requis (encore vides) bloque a l'etape 1.
+            await expect(page.getByTestId('responsableLegal.ville')).toHaveValue(donnees.villeModifiee);
+            await page.getByTestId('suivant-responsable-legal').click();
+
+            // En modification, Eleves.tsx ouvre le formulaire sur l'eleve 0 (champs vides) : on le
+            // referme pour faire apparaitre le bouton « Ajouter un eleve ».
+            await page.getByTestId('annuler-eleve').click();
+            await page.getByTestId('ajouter-eleve').click();
+            await remplirTexte(page, 'nomEleve', donnees.eleve2.nom);
+            await remplirTexte(page, 'prenomEleve', donnees.eleve2.prenom);
+            await remplirDate(page, 'dateNaissanceEleve', donnees.eleve2.dateNaissance);
+            await choisirOption(page, 'niveauScolaire', 'CP');
+            await page.getByTestId('enregistrer-eleve').click();
+            await expect(page.locator('[testid^="modifier-eleve-"]')).toHaveCount(2);
+
+            await page.getByTestId('suivant-eleves').click();
+            await page.getByTestId('valider-inscription').click();
+            await page.waitForURL('**/adminCours');
+
+            // Re-ouvrir la fiche : les deux eleves doivent etre persistes.
+            await remplirTexte(page, 'nom', donnees.eleve.nom);
+            await page.getByTestId('rechercher').click();
+            await expect(boutonModifier).toHaveCount(1);
+            await boutonModifier.click();
+            await expect(page.getByTestId('responsableLegal.ville')).toHaveValue(donnees.villeModifiee);
+            await page.getByTestId('suivant-responsable-legal').click();
+            await expect(page.locator('[testid^="modifier-eleve-"]')).toHaveCount(2);
+            await expect(page.getByText(donnees.eleve2.nom)).toBeVisible();
+        });
     });
 });
