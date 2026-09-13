@@ -98,6 +98,9 @@ test.describe.serial('Inscription enfant', () => {
             await expect(boutonModifier).toHaveCount(1);
             await boutonModifier.click();
 
+            // Attendre que la fiche soit chargee avant de passer a l'etape suivante, sinon la
+            // validation des champs requis (encore vides) bloque a l'etape 1.
+            await expect(page.getByTestId('responsableLegal.ville')).toHaveValue(donnees.villeModifiee);
             await page.getByTestId('suivant-responsable-legal').click();
 
             // En modification, Eleves.tsx ouvre le formulaire sur l'eleve 0 (champs vides) : on le
@@ -120,6 +123,7 @@ test.describe.serial('Inscription enfant', () => {
             await page.getByTestId('rechercher').click();
             await expect(boutonModifier).toHaveCount(1);
             await boutonModifier.click();
+            await expect(page.getByTestId('responsableLegal.ville')).toHaveValue(donnees.villeModifiee);
             await page.getByTestId('suivant-responsable-legal').click();
             await expect(page.locator('[testid^="modifier-eleve-"]')).toHaveCount(2);
             await expect(page.getByText(donnees.eleve2.nom)).toBeVisible();
