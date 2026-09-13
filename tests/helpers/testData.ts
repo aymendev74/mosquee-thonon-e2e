@@ -60,6 +60,12 @@ export const donneesInscriptionEnfant = memoiser((suffix) => ({
         prenom: 'Enfant',
         dateNaissance: '01.01.2015',
     },
+    /** Second élève, ajouté par un administrateur sur l'inscription existante. */
+    eleve2: {
+        nom: `${E2E_PREFIX}CADET${suffix}`,
+        prenom: 'Cadet',
+        dateNaissance: '01.01.2016',
+    },
     villeModifiee: 'Evian-les-Bains',
 }));
 
